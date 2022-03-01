@@ -9,8 +9,8 @@ from Server import Server, ServerPolicy
 from Subscriber import Subscriber
 
 
-def createClients(publish_count=25, subscribe_count=25, server_policy = ServerPolicy.INFINITY_QUEUE_SIZE):
-    server = Server(server_policy)
+def createClients(publish_count=25, subscribe_count=25, server_policy=ServerPolicy.INFINITY_QUEUE_SIZE):
+    server = Server(server_policy=server_policy)
     publishers = []
     for i in range(publish_count):
         client = Publisher(server, i)
@@ -34,7 +34,7 @@ async def startTesting(server, publishers, subscribers):
     for client in publishers:
         client.start()
 
-    while True :
+    while True:
         await asyncio.sleep(1)
         ready_to_stop = True
         for i in publishers:
@@ -42,7 +42,7 @@ async def startTesting(server, publishers, subscribers):
                 continue
             ready_to_stop = False
             break
-        if ready_to_stop :
+        if ready_to_stop:
             break
     print("All publishers are done!")
     task = server.stop()
@@ -55,15 +55,17 @@ def collectStats(server, publishers, subscribers):
     send_count = 0
     receive_count = 0
     error_count = 0
+    active_count = 0
     for client in publishers:
         send_count += client.stats()
     print("Send:" + str(send_count))
 
     for client in subscribers:
-        receive_num, receive_err = client.stats()
+        receive_num, receive_err, active_stat = client.stats()
         receive_count += receive_num
         error_count += receive_err
-    print("Receive %d items, %d errors" % (receive_count, error_count))
+        active_count += active_stat
+    print("Receive %d items by sub, %d items by active, %d errors" % (receive_count, active_count, error_count))
 
     pass
 
@@ -77,11 +79,11 @@ def appendSubscribes(server, subscribers, publish_count, append_num):
 
 
 if __name__ == '__main__':
-    cserver, cpublishers, csubscribers = createClients(server_policy = ServerPolicy.STRONG_QUEUE_SIZE)
+    cserver, cpublishers, csubscribers = createClients(server_policy=ServerPolicy.STRONG_QUEUE_SIZE)
 
     i = 0
 
-    while i < 100 :
+    while i < 100:
         print("PROCESS publishers: %d, subscribers: %d" % (len(cpublishers), len(csubscribers)))
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)

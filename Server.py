@@ -8,7 +8,7 @@ class ServerPolicy(Enum) :
 
 
 class Server:
-    def __init__(self, capacity=1000, server_policy = ServerPolicy.INFINITY_QUEUE_SIZE):
+    def __init__(self, capacity=500, server_policy = ServerPolicy.INFINITY_QUEUE_SIZE):
         self.capacity = capacity
         self._future = None
         self._Q = []  # очередь отправок получателям
@@ -55,3 +55,9 @@ class Server:
         if publ not in self._subscriptions:
             self._subscriptions[publ] = []
         self._subscriptions[publ].append(subs)
+
+    async def get(self, publ):
+        await asyncio.sleep(0.1)
+        if publ in self._items:
+            return self._items[publ]
+        return 0
