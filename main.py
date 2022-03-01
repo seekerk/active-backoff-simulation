@@ -44,7 +44,6 @@ async def startTesting(server, publishers, subscribers):
             break
         if ready_to_stop:
             break
-    print("All publishers are done!")
     task = server.stop()
     for i in subscribers:
         await i.get_job()

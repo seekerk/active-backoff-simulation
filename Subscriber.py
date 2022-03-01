@@ -3,6 +3,7 @@ import asyncio
 
 class Subscriber:
     def __init__(self, server, num, pub_num):
+        self.stop_active = None
         self.message_count = None
         self.active_count = 0
         self.active_process = None
@@ -24,6 +25,7 @@ class Subscriber:
         self.process = asyncio.ensure_future(self._job())
         self.timeout = 1
         self.active_count = 0
+        self.stop_active = False
         self.active_process = asyncio.ensure_future(self._active_job())
 
     def get_job(self):
@@ -34,17 +36,17 @@ class Subscriber:
             cur_msg_num = self.message_num  # запоминаем последний номер сообщения
             await asyncio.sleep(3)
             if cur_msg_num == self.message_num:  # если за время сна не изменился номер, то выходим
-                self.timeout = 0
+                self.stop_active = True
                 await self.active_process
                 break
 
     async def _active_job(self):  # реализация активной подписки
-        while self.timeout > 0:
+        while not self.stop_active:
             await asyncio.sleep(self.timeout)
-            if self.timeout == 0:
+            if self.stop_active:
                 break
             val = await self.server.get(self.publisher)
-            if val > self.message_num:
+            if val > self.message_num + 1: # нашли с помощью активной стратегии пропуск данных
                 # if val - self.message_num > 1:
                 #     print("BINGO!!!! subs=%d, val=%d, prev=%d, errors:%d" % (self.num, val, self.message_num,
                 #                                                              self.error_count))
@@ -52,6 +54,10 @@ class Subscriber:
                 self.error_count += val - self.message_num - 1
                 self.message_num = val
                 self.active_count += 1
+            elif val > self.message_num: # вытащили нормальное следующее значение подписки раньше подписки
+                self.message_num = val
+                self.active_count += 1
+                self.timeout += 0.1
             else:
                 self.timeout += 0.1
 
