@@ -5,12 +5,12 @@
 import asyncio
 
 from Publisher import Publisher
-from Server import Server
+from Server import Server, ServerPolicy
 from Subscriber import Subscriber
 
 
-def createClients(publish_count=25, subscribe_count=25):
-    server = Server()
+def createClients(publish_count=25, subscribe_count=25, server_policy = ServerPolicy.INFINITY_QUEUE_SIZE):
+    server = Server(server_policy)
     publishers = []
     for i in range(publish_count):
         client = Publisher(server, i)
@@ -44,10 +44,11 @@ async def startTesting(server, publishers, subscribers):
             break
         if ready_to_stop :
             break
-    print("All publishers are done, ")
+    print("All publishers are done!")
+    task = server.stop()
     for i in subscribers:
         await i.get_job()
-    await server.stop()
+    await task
 
 
 def collectStats(server, publishers, subscribers):
@@ -67,14 +68,29 @@ def collectStats(server, publishers, subscribers):
     pass
 
 
-if __name__ == '__main__':
-    cserver, cpublishers, csubscribers = createClients()
+def appendSubscribes(server, subscribers, publish_count, append_num):
+    for i in range(len(subscribers), len(subscribers) + append_num):
+        client = Subscriber(server, i, i % publish_count)
+        subscribers.append(client)
+    return subscribers
+    pass
 
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(startTesting(cserver, cpublishers, csubscribers))
-    finally:
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
-        collectStats(cserver, cpublishers, csubscribers)
+
+if __name__ == '__main__':
+    cserver, cpublishers, csubscribers = createClients(server_policy = ServerPolicy.STRONG_QUEUE_SIZE)
+
+    i = 0
+
+    while i < 100 :
+        print("PROCESS publishers: %d, subscribers: %d" % (len(cpublishers), len(csubscribers)))
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(startTesting(cserver, cpublishers, csubscribers))
+            collectStats(cserver, cpublishers, csubscribers)
+        finally:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.close()
+
+        csubscribers = appendSubscribes(cserver, csubscribers, len(cpublishers), 5)
+        i += 1

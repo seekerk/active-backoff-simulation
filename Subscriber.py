@@ -26,7 +26,7 @@ class Subscriber:
             await asyncio.sleep(3)
             if cur_msg_num == self.message_num:  # если за время сна не изменился номер, то выходим
                 break
-        print("Stop wait at Subscriber %d" % self.num)
+        #print("Stop wait at Subscriber %d" % self.num)
 
     def receive(self, publ, message):
         self.error_count += message - self.message_num - 1
