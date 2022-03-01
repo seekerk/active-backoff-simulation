@@ -4,19 +4,9 @@
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import asyncio
 
+from Publisher import Publisher
+from Server import Server
 from Subscriber import Subscriber
-
-
-class Publisher:
-    def __init__(self, server, num):
-        self.server = server
-        self.num = num
-
-    pass
-
-
-class Server:
-    pass
 
 
 def createClients(publish_count=25, subscribe_count=25):
@@ -36,12 +26,28 @@ def createClients(publish_count=25, subscribe_count=25):
 
 # Press the green button in the gutter to run the script.
 async def startTesting(server, publishers, subscribers):
+    server.start()
+
     for client in subscribers:
         client.start()
 
     for client in publishers:
         client.start()
-    pass
+
+    while True :
+        await asyncio.sleep(1)
+        ready_to_stop = True
+        for i in publishers:
+            if i.is_stop():
+                continue
+            ready_to_stop = False
+            break
+        if ready_to_stop :
+            break
+    print("All publishers are done, ")
+    for i in subscribers:
+        await i.get_job()
+    await server.stop()
 
 
 def collectStats(server, publishers, subscribers):
@@ -56,7 +62,7 @@ def collectStats(server, publishers, subscribers):
         receive_num, receive_err = client.stats()
         receive_count += receive_num
         error_count += receive_err
-    print("Receive %d items, %d errors", receive_count, error_count)
+    print("Receive %d items, %d errors" % (receive_count, error_count))
 
     pass
 
@@ -71,6 +77,4 @@ if __name__ == '__main__':
     finally:
         loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()
-
-    collectStats(cserver, cpublishers, csubscribers)
-
+        collectStats(cserver, cpublishers, csubscribers)
